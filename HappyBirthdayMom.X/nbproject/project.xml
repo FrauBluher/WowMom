@@ -6,11 +6,11 @@
             <name>HappyBirthdayMom</name>
             <creation-uuid>36741f1f-9a9c-4f95-b67e-0545e78694cb</creation-uuid>
             <make-project-type>0</make-project-type>
-            <c-extensions/>
+            <c-extensions>c</c-extensions>
             <cpp-extensions/>
-            <header-extensions/>
-            <make-dep-projects/>
+            <header-extensions>h</header-extensions>
             <sourceEncoding>ISO-8859-1</sourceEncoding>
+            <make-dep-projects/>
         </data>
     </configuration>
 </project>
