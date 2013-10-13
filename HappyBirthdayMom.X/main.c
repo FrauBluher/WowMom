@@ -18,6 +18,8 @@
 #define COLUMN4 06
 #define COLUMN5 08
 
+#define PRODUCTION
+
 _FOSCSEL(FNOSC_FRC);
 _FOSC(FCKSM_CSECMD & OSCIOFNC_OFF & POSCMD_XT);
 _FWDT(FWDTEN_OFF);
@@ -27,10 +29,31 @@ _FICD(JTAGEN_OFF & ICS_PGD1);
 void ClockInit();
 void TimersInit();
 
-//HEY MOM, HAPPY 50th!
-uint8_t Message[] = {204, 189, 289, 4, 229, 239, 229, 4, 204, 169, 244, 244, 289,
-	109, 84, 424, 364, 9, 4};
+// HEY MOM, HAPPY 50th!
+uint8_t Message[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, //
+	0x7F, 0x08, 0x08, 0x08, 0x7F, //H
+	0x7F, 0x49, 0x49, 0x49, 0x41, //E
+	0x03, 0x04, 0x78, 0x04, 0x03, //Y
+	0x00, 0x00, 0x00, 0x00, 0x00, // 
+	0x7F, 0x02, 0x04, 0x02, 0x7F, //M
+	0x3E, 0x41, 0x41, 0x41, 0x3E, //O
+	0x7F, 0x02, 0x04, 0x02, 0x7F, //M
+	0x00, 0x00, 0x00, 0x00, 0x00, //
+	0x7F, 0x08, 0x08, 0x08, 0x7F, //H
+	0x7E, 0x11, 0x11, 0x11, 0x7E, //A
+	0x7F, 0x09, 0x09, 0x09, 0x06, //P
+	0x7F, 0x09, 0x09, 0x09, 0x06, //P
+	0x03, 0x04, 0x78, 0x04, 0x03, //Y
+	0x27, 0x45, 0x45, 0x45, 0x39, //
+	0x3E, 0x51, 0x49, 0x45, 0x3E, //5
+	0x04, 0x3F, 0x44, 0x40, 0x20, //0
+	0x7F, 0x08, 0x04, 0x04, 0x78, //t
+	0x00, 0x00, 0x5F, 0x00, 0x00, //h
+	0x00, 0x00, 0x00, 0x00, 0x00 //!
+};
 
+#ifndef PRODUCTION
 uint16_t ASCII[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, // (space) 4
 	0x00, 0x00, 0x5F, 0x00, 0x00, // ! 9
@@ -129,6 +152,7 @@ uint16_t ASCII[] = {
 	0x08, 0x08, 0x2A, 0x1C, 0x08, // -> 574
 	0x08, 0x1C, 0x2A, 0x08, 0x08 // <- 579
 };
+#endif
 
 static int currentMessageIndex = 0;
 
@@ -138,9 +162,12 @@ void main(void)
 	TimersInit();
 	I2C_Init(57600);
 	//Default register value is equal to 0b1110000 ADx isn't set
+	I2C_WriteToReg(0x70, 0x20, 0b00100001);
+	I2C_WriteToReg(0x70, 0xA0, 0b10100000);
+	I2C_WriteToReg(0x70, 0x80, 0b10000001);
 
 	//This is the command for 8/16 Duty Setup 0xEx where x is 0 - F for 1/16 to 16/16 duty.
-	I2C_WriteToReg(0x70, 0xE0, 0xE7);
+	I2C_WriteToReg(0x70, 0xEF, 0xE7);
 }
 
 void ClockInit(void)
@@ -164,21 +191,26 @@ void TimersInit(void)
 	T2CONbits.TGATE = 0;
 	T2CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
 	TMR2 = 0x00;
-	PR2 = 8000;  //31250 / 8000 = 3.9 Hz
+	PR2 = 8000; //31250 / 8000 = 3.9 Hz
 	IPC1bits.T2IP = 0x01;
 	IFS0bits.T2IF = 0;
 	IEC0bits.T2IE = 1;
 	T2CONbits.TON = 1;
 }
 
-//Message Length is 19.
+//Message Length is 20.
+
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void)
 {
+	if (currentMessageIndex == 96) {
+		currentMessageIndex = 0;
+	}
 	I2C_WriteToReg(0x70, COLUMN1, Message[currentMessageIndex]);
 	I2C_WriteToReg(0x70, COLUMN2, Message[currentMessageIndex + 1]);
 	I2C_WriteToReg(0x70, COLUMN3, Message[currentMessageIndex + 2]);
 	I2C_WriteToReg(0x70, COLUMN4, Message[currentMessageIndex + 3]);
 	I2C_WriteToReg(0x70, COLUMN5, Message[currentMessageIndex + 4]);
+	I2C_WriteToReg(0x70, 0x80, 0b10000001);
 	currentMessageIndex++;
 	IFS0bits.T2IF = 0; // Clear Timer1 Interrupt Flag
 }
